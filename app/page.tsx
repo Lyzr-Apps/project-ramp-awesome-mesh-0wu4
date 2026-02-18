@@ -152,7 +152,6 @@ const DOCUMENT_SECTIONS: SectionConfig[] = [
   { key: 'project_scope', title: 'Project Scope', icon: <FiLayers className="h-4 w-4" /> },
   { key: 'technical_requirements', title: 'Technical Requirements', icon: <FiCpu className="h-4 w-4" /> },
   { key: 'timeline_milestones', title: 'Timeline & Milestones', icon: <FiClock className="h-4 w-4" /> },
-  { key: 'resource_needs', title: 'Resource Needs', icon: <FiBriefcase className="h-4 w-4" /> },
 ]
 
 // --- Loading steps ---
