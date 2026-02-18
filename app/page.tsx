@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { callAIAgent } from '@/lib/aiAgent'
+import { callAIAgent, uploadFiles } from '@/lib/aiAgent'
 import { copyToClipboard } from '@/lib/clipboard'
 import { useLyzrAgentEvents } from '@/lib/lyzrAgentEvents'
 import { AgentActivityPanel } from '@/components/AgentActivityPanel'
@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { FiHash, FiFileText, FiClipboard, FiCopy, FiDownload, FiAlertTriangle, FiChevronDown, FiChevronRight, FiCheckCircle, FiLoader, FiSearch, FiEdit3, FiTarget, FiUsers, FiLayers, FiCpu, FiClock, FiBriefcase, FiZap, FiBookOpen } from 'react-icons/fi'
+import { FiHash, FiFileText, FiClipboard, FiCopy, FiDownload, FiAlertTriangle, FiChevronDown, FiChevronRight, FiCheckCircle, FiLoader, FiSearch, FiEdit3, FiTarget, FiUsers, FiLayers, FiCpu, FiClock, FiBriefcase, FiZap, FiBookOpen, FiUploadCloud, FiX, FiPaperclip } from 'react-icons/fi'
 
 // --- Constants ---
 const MANAGER_AGENT_ID = '6996271fb3106c6867a6c6ac'
@@ -354,7 +354,7 @@ function EmptyState() {
         No Document Generated Yet
       </h3>
       <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
-        Enter your Slack channel name and any meeting transcripts or notes, then hit generate to create a comprehensive project intake document.
+        Enter your Slack channel name, upload or paste meeting transcripts and notes, then hit generate to create a comprehensive project intake document.
       </p>
       <div className="flex items-center gap-6 mt-8 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
@@ -370,6 +370,201 @@ function EmptyState() {
           <span>Document</span>
         </div>
       </div>
+    </div>
+  )
+}
+
+// --- Uploaded file type ---
+interface UploadedFileInfo {
+  file: File
+  name: string
+  size: string
+  textContent: string | null
+  assetId: string | null
+  uploading: boolean
+  error: string | null
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+const ACCEPTED_FILE_TYPES = '.txt,.md,.doc,.docx,.pdf,.rtf,.csv,.json,.log'
+const MAX_FILE_SIZE_MB = 10
+
+async function readFileAsText(file: File): Promise<string | null> {
+  const textTypes = ['text/', 'application/json', 'application/csv']
+  const isTextFile = textTypes.some(t => file.type.startsWith(t)) ||
+    /\.(txt|md|csv|json|log|rtf)$/i.test(file.name)
+
+  if (!isTextFile) return null
+
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => resolve(null)
+    reader.readAsText(file)
+  })
+}
+
+// --- File Upload Zone Component ---
+function FileUploadZone({
+  label,
+  icon,
+  files,
+  onFilesAdd,
+  onFileRemove,
+  disabled,
+}: {
+  label: string
+  icon: React.ReactNode
+  files: UploadedFileInfo[]
+  onFilesAdd: (files: File[]) => void
+  onFileRemove: (index: number) => void
+  disabled: boolean
+}) {
+  const [isDragging, setIsDragging] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!disabled) setIsDragging(true)
+  }, [disabled])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    if (disabled) return
+    const droppedFiles = Array.from(e.dataTransfer.files)
+    if (droppedFiles.length > 0) onFilesAdd(droppedFiles)
+  }, [disabled, onFilesAdd])
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files ?? [])
+    if (selectedFiles.length > 0) onFilesAdd(selectedFiles)
+    if (inputRef.current) inputRef.current.value = ''
+  }, [onFilesAdd])
+
+  return (
+    <div className="space-y-2">
+      {/* Drop zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => !disabled && inputRef.current?.click()}
+        className={`relative flex flex-col items-center justify-center gap-2 p-5 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
+          isDragging
+            ? 'border-primary bg-primary/5 scale-[1.01]'
+            : disabled
+            ? 'border-border/50 bg-muted/30 cursor-not-allowed opacity-60'
+            : 'border-border hover:border-primary/50 hover:bg-accent/30'
+        }`}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={ACCEPTED_FILE_TYPES}
+          onChange={handleInputChange}
+          className="hidden"
+          disabled={disabled}
+        />
+        <div className={`flex items-center justify-center h-10 w-10 rounded-xl transition-colors ${isDragging ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+          <FiUploadCloud className="h-5 w-5" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-foreground">
+            {isDragging ? 'Drop files here' : 'Drop files or click to upload'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            TXT, MD, PDF, DOC, DOCX, CSV, JSON (max {MAX_FILE_SIZE_MB}MB)
+          </p>
+        </div>
+      </div>
+
+      {/* Uploaded files list */}
+      {files.length > 0 && (
+        <div className="space-y-1.5">
+          {files.map((fileInfo, idx) => (
+            <div
+              key={`${fileInfo.name}-${idx}`}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/60 border border-border text-sm group"
+            >
+              <FiPaperclip className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{fileInfo.name}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {fileInfo.size}
+                  {fileInfo.uploading && ' -- Uploading...'}
+                  {fileInfo.error && ` -- ${fileInfo.error}`}
+                  {fileInfo.assetId && ' -- Uploaded'}
+                  {fileInfo.textContent && !fileInfo.assetId && !fileInfo.uploading && !fileInfo.error && ' -- Ready'}
+                </p>
+              </div>
+              {fileInfo.uploading ? (
+                <FiLoader className="h-3.5 w-3.5 text-muted-foreground animate-spin shrink-0" />
+              ) : fileInfo.assetId ? (
+                <FiCheckCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />
+              ) : fileInfo.error ? (
+                <FiAlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              ) : null}
+              <button
+                onClick={(e) => { e.stopPropagation(); onFileRemove(idx) }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-destructive/10"
+                disabled={disabled}
+              >
+                <FiX className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- Input mode tabs ---
+function InputModeTabs({
+  mode,
+  onModeChange,
+}: {
+  mode: 'paste' | 'upload'
+  onModeChange: (mode: 'paste' | 'upload') => void
+}) {
+  return (
+    <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/60 w-fit">
+      <button
+        onClick={() => onModeChange('paste')}
+        className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+          mode === 'paste'
+            ? 'bg-white text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        }`}
+      >
+        Paste
+      </button>
+      <button
+        onClick={() => onModeChange('upload')}
+        className={`px-3 py-1 rounded-md text-xs font-medium transition-all flex items-center gap-1 ${
+          mode === 'upload'
+            ? 'bg-white text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        }`}
+      >
+        <FiUploadCloud className="h-3 w-3" />
+        Upload
+      </button>
     </div>
   )
 }
@@ -417,6 +612,12 @@ export default function Page() {
     notes: '',
   })
 
+  // --- File upload state ---
+  const [transcriptFiles, setTranscriptFiles] = useState<UploadedFileInfo[]>([])
+  const [noteFiles, setNoteFiles] = useState<UploadedFileInfo[]>([])
+  const [transcriptInputMode, setTranscriptInputMode] = useState<'paste' | 'upload'>('upload')
+  const [noteInputMode, setNoteInputMode] = useState<'paste' | 'upload'>('upload')
+
   // --- App state ---
   const [loading, setLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState(0)
@@ -461,12 +662,109 @@ export default function Page() {
       setFormData(SAMPLE_FORM)
       setDocument(SAMPLE_DOCUMENT)
       setError(null)
+      setTranscriptFiles([])
+      setNoteFiles([])
     } else {
       setFormData({ channel: '', transcripts: '', notes: '' })
       setDocument(null)
       setError(null)
+      setTranscriptFiles([])
+      setNoteFiles([])
     }
   }, [sampleData])
+
+  // --- File upload handlers ---
+  const processAndUploadFiles = useCallback(async (
+    newFiles: File[],
+    setFiles: React.Dispatch<React.SetStateAction<UploadedFileInfo[]>>
+  ) => {
+    const validFiles = newFiles.filter(f => {
+      if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024) return false
+      return true
+    })
+
+    if (validFiles.length === 0) return
+
+    // Create initial file entries
+    const newEntries: UploadedFileInfo[] = validFiles.map(f => ({
+      file: f,
+      name: f.name,
+      size: formatFileSize(f.size),
+      textContent: null,
+      assetId: null,
+      uploading: true,
+      error: null,
+    }))
+
+    setFiles(prev => [...prev, ...newEntries])
+
+    // Process each file: read text + upload
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i]
+
+      // Read text content client-side
+      const textContent = await readFileAsText(file)
+
+      // Upload to server for asset_id
+      try {
+        const uploadResult = await uploadFiles(file)
+        const assetId = uploadResult.success && uploadResult.asset_ids.length > 0
+          ? uploadResult.asset_ids[0]
+          : null
+
+        setFiles(prev => {
+          const updated = [...prev]
+          // Find the matching entry (by matching name + uploading state from the end)
+          const entryIdx = updated.findLastIndex(
+            e => e.name === file.name && e.uploading
+          )
+          if (entryIdx !== -1) {
+            updated[entryIdx] = {
+              ...updated[entryIdx],
+              textContent,
+              assetId,
+              uploading: false,
+              error: uploadResult.success ? null : (uploadResult.error ?? 'Upload failed'),
+            }
+          }
+          return updated
+        })
+      } catch (err) {
+        setFiles(prev => {
+          const updated = [...prev]
+          const entryIdx = updated.findLastIndex(
+            e => e.name === file.name && e.uploading
+          )
+          if (entryIdx !== -1) {
+            updated[entryIdx] = {
+              ...updated[entryIdx],
+              textContent,
+              assetId: null,
+              uploading: false,
+              error: 'Upload failed',
+            }
+          }
+          return updated
+        })
+      }
+    }
+  }, [])
+
+  const handleTranscriptFilesAdd = useCallback((files: File[]) => {
+    processAndUploadFiles(files, setTranscriptFiles)
+  }, [processAndUploadFiles])
+
+  const handleNoteFilesAdd = useCallback((files: File[]) => {
+    processAndUploadFiles(files, setNoteFiles)
+  }, [processAndUploadFiles])
+
+  const handleTranscriptFileRemove = useCallback((index: number) => {
+    setTranscriptFiles(prev => prev.filter((_, i) => i !== index))
+  }, [])
+
+  const handleNoteFileRemove = useCallback((index: number) => {
+    setNoteFiles(prev => prev.filter((_, i) => i !== index))
+  }, [])
 
   // --- Generate handler ---
   const handleGenerate = useCallback(async () => {
@@ -479,14 +777,47 @@ export default function Page() {
     setActiveAgentId(MANAGER_AGENT_ID)
     agentActivity.setProcessing(true)
 
+    // Build transcript content from paste + uploaded files
+    const pastedTranscripts = transcriptInputMode === 'paste' ? formData.transcripts.trim() : ''
+    const fileTranscriptTexts = transcriptFiles
+      .filter(f => f.textContent)
+      .map(f => `--- File: ${f.name} ---\n${f.textContent}`)
+      .join('\n\n')
+    const allTranscripts = [pastedTranscripts, fileTranscriptTexts].filter(Boolean).join('\n\n')
+
+    // Build notes content from paste + uploaded files
+    const pastedNotes = noteInputMode === 'paste' ? formData.notes.trim() : ''
+    const fileNoteTexts = noteFiles
+      .filter(f => f.textContent)
+      .map(f => `--- File: ${f.name} ---\n${f.textContent}`)
+      .join('\n\n')
+    const allNotes = [pastedNotes, fileNoteTexts].filter(Boolean).join('\n\n')
+
+    // Collect all asset IDs from uploaded files
+    const allAssetIds = [
+      ...transcriptFiles.filter(f => f.assetId).map(f => f.assetId!),
+      ...noteFiles.filter(f => f.assetId).map(f => f.assetId!),
+    ]
+
+    // Build file attachment summary
+    const transcriptFileNames = transcriptFiles.map(f => f.name)
+    const noteFileNames = noteFiles.map(f => f.name)
+    const fileAttachmentInfo = [
+      transcriptFileNames.length > 0 ? `Uploaded transcript files: ${transcriptFileNames.join(', ')}` : '',
+      noteFileNames.length > 0 ? `Uploaded notes files: ${noteFileNames.join(', ')}` : '',
+    ].filter(Boolean).join('\n')
+
     const message = `Slack Channel: ${channelValue}
-Meeting Transcripts: ${formData.transcripts.trim() || 'None provided'}
-Raw Meeting Notes: ${formData.notes.trim() || 'None provided'}
+Meeting Transcripts: ${allTranscripts || 'None provided'}
+Raw Meeting Notes: ${allNotes || 'None provided'}
+${fileAttachmentInfo ? `\n${fileAttachmentInfo}` : ''}
 
 Please generate a comprehensive Project Intake Document from the above information.`
 
     try {
-      const result = await callAIAgent(message, MANAGER_AGENT_ID)
+      const result = await callAIAgent(message, MANAGER_AGENT_ID, {
+        assets: allAssetIds.length > 0 ? allAssetIds : undefined,
+      })
 
       if (result?.session_id) {
         setSessionId(result.session_id)
@@ -509,7 +840,7 @@ Please generate a comprehensive Project Intake Document from the above informati
       setActiveAgentId(null)
       agentActivity.setProcessing(false)
     }
-  }, [formData, agentActivity])
+  }, [formData, agentActivity, transcriptInputMode, noteInputMode, transcriptFiles, noteFiles])
 
   // --- Copy handler ---
   const handleCopy = useCallback(async () => {
@@ -530,7 +861,8 @@ Please generate a comprehensive Project Intake Document from the above informati
   }, [])
 
   // --- Derived ---
-  const canGenerate = formData.channel.trim().length > 0 && !loading
+  const hasAnyUploading = transcriptFiles.some(f => f.uploading) || noteFiles.some(f => f.uploading)
+  const canGenerate = formData.channel.trim().length > 0 && !loading && !hasAnyUploading
   const clarifications = Array.isArray(document?.needs_clarification) ? document.needs_clarification : []
   const dataSources = Array.isArray(document?.data_sources) ? document.data_sources : []
 
@@ -596,34 +928,62 @@ Please generate a comprehensive Project Intake Document from the above informati
 
                   {/* Meeting Transcripts */}
                   <div className="space-y-2">
-                    <Label htmlFor="transcripts" className="text-sm font-medium flex items-center gap-1.5">
-                      <FiFileText className="h-3.5 w-3.5 text-muted-foreground" />
-                      Meeting Transcripts
-                    </Label>
-                    <Textarea
-                      id="transcripts"
-                      placeholder="Paste meeting transcripts here (optional)..."
-                      value={formData.transcripts}
-                      onChange={(e) => setFormData(prev => ({ ...prev, transcripts: e.target.value }))}
-                      rows={5}
-                      className="bg-white/80 resize-y"
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <FiFileText className="h-3.5 w-3.5 text-muted-foreground" />
+                        Meeting Transcripts
+                      </Label>
+                      <InputModeTabs mode={transcriptInputMode} onModeChange={setTranscriptInputMode} />
+                    </div>
+                    {transcriptInputMode === 'paste' ? (
+                      <Textarea
+                        id="transcripts"
+                        placeholder="Paste meeting transcripts here (optional)..."
+                        value={formData.transcripts}
+                        onChange={(e) => setFormData(prev => ({ ...prev, transcripts: e.target.value }))}
+                        rows={5}
+                        className="bg-white/80 resize-y"
+                      />
+                    ) : (
+                      <FileUploadZone
+                        label="transcript files"
+                        icon={<FiFileText className="h-4 w-4" />}
+                        files={transcriptFiles}
+                        onFilesAdd={handleTranscriptFilesAdd}
+                        onFileRemove={handleTranscriptFileRemove}
+                        disabled={loading}
+                      />
+                    )}
                   </div>
 
                   {/* Meeting Notes */}
                   <div className="space-y-2">
-                    <Label htmlFor="notes" className="text-sm font-medium flex items-center gap-1.5">
-                      <FiClipboard className="h-3.5 w-3.5 text-muted-foreground" />
-                      Meeting Notes
-                    </Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Paste raw meeting notes here (optional)..."
-                      value={formData.notes}
-                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                      rows={5}
-                      className="bg-white/80 resize-y"
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium flex items-center gap-1.5">
+                        <FiClipboard className="h-3.5 w-3.5 text-muted-foreground" />
+                        Meeting Notes
+                      </Label>
+                      <InputModeTabs mode={noteInputMode} onModeChange={setNoteInputMode} />
+                    </div>
+                    {noteInputMode === 'paste' ? (
+                      <Textarea
+                        id="notes"
+                        placeholder="Paste raw meeting notes here (optional)..."
+                        value={formData.notes}
+                        onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                        rows={5}
+                        className="bg-white/80 resize-y"
+                      />
+                    ) : (
+                      <FileUploadZone
+                        label="note files"
+                        icon={<FiClipboard className="h-4 w-4" />}
+                        files={noteFiles}
+                        onFilesAdd={handleNoteFilesAdd}
+                        onFileRemove={handleNoteFileRemove}
+                        disabled={loading}
+                      />
+                    )}
                   </div>
 
                   {/* Generate Button */}
