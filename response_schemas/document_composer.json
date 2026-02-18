@@ -1,0 +1,28 @@
+{
+  "agent_name": "Document Composer Agent",
+  "agent_id": "699626cbf17ccc575ee48c57",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "document_title": "string",
+    "generation_date": "string",
+    "data_sources": ["string"],
+    "problem_statement": "string",
+    "project_goals": "string",
+    "success_criteria": "string",
+    "stakeholder_map": "string",
+    "project_scope": "string",
+    "technical_requirements": "string",
+    "timeline_milestones": "string",
+    "resource_needs": "string",
+    "needs_clarification": [
+      {
+        "priority": "string",
+        "category": "string",
+        "description": "string"
+      }
+    ],
+    "executive_summary": "string"
+  }
+}

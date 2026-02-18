@@ -1,0 +1,29 @@
+{
+  "agent_name": "Intake Coordinator",
+  "agent_id": "6996271fb3106c6867a6c6ac",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "document_title": "string",
+    "generation_date": "string",
+    "data_sources": ["string"],
+    "executive_summary": "string",
+    "problem_statement": "string",
+    "project_goals": "string",
+    "success_criteria": "string",
+    "stakeholder_map": "string",
+    "project_scope": "string",
+    "technical_requirements": "string",
+    "timeline_milestones": "string",
+    "resource_needs": "string",
+    "needs_clarification": [
+      {
+        "priority": "string",
+        "category": "string",
+        "description": "string"
+      }
+    ],
+    "processing_status": "string"
+  }
+}

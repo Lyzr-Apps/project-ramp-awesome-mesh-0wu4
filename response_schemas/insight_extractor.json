@@ -1,0 +1,52 @@
+{
+  "agent_name": "Insight Extractor Agent",
+  "agent_id": "6996270724c85f9f3404709a",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "problem_statement": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "project_goals": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "success_criteria": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "stakeholder_map": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "project_scope": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "technical_requirements": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "timeline_milestones": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "resource_needs": {
+      "content": "string",
+      "confidence": "string",
+      "sources": ["string"]
+    },
+    "contradictions": ["string"],
+    "gaps": ["string"],
+    "clarification_needed": ["string"]
+  }
+}

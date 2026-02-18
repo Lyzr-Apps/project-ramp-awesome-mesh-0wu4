@@ -1,0 +1,19 @@
+{
+  "agent_name": "Slack Harvester Agent",
+  "agent_id": "699626ef4a9c68de2584b947",
+  "agent_type": "json",
+  "accessor": "json",
+  "has_module_outputs": false,
+  "response_schema": {
+    "channel_name": "string",
+    "channel_id": "string",
+    "message_count": "number",
+    "date_range": "string",
+    "chronological_narrative": "string",
+    "key_topics": ["string"],
+    "key_decisions": ["string"],
+    "action_items": ["string"],
+    "participants": ["string"],
+    "status": "string"
+  }
+}

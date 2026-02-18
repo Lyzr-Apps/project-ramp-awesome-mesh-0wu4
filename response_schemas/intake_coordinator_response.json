@@ -1,0 +1,64 @@
+{
+  "agent_name": "Intake Coordinator",
+  "agent_id": "6996271fb3106c6867a6c6ac",
+  "description": "Orchestrates the end-to-end intake document generation workflow \u2014 routes raw inputs to sub-agents, coordinates the extraction-to-synthesis pipeline, and aggregates the final structured document",
+  "agent_type": "json",
+  "accessor": "result",
+  "auto_generated": true,
+  "response_schema": {
+    "document_title": "string",
+    "generation_date": "string",
+    "data_sources": [
+      "string"
+    ],
+    "executive_summary": "string",
+    "problem_statement": "string",
+    "project_goals": "string",
+    "success_criteria": "string",
+    "stakeholder_map": "string",
+    "project_scope": "string",
+    "technical_requirements": "string",
+    "timeline_milestones": "string",
+    "resource_needs": "string",
+    "needs_clarification": [
+      {
+        "priority": "string",
+        "category": "string",
+        "description": "string"
+      }
+    ],
+    "processing_status": "string"
+  },
+  "example_response": {
+    "document_title": "sample string",
+    "generation_date": "sample string",
+    "data_sources": [
+      "sample string"
+    ],
+    "executive_summary": "sample string",
+    "problem_statement": "sample string",
+    "project_goals": "sample string",
+    "success_criteria": "sample string",
+    "stakeholder_map": "sample string",
+    "project_scope": "sample string",
+    "technical_requirements": "sample string",
+    "timeline_milestones": "sample string",
+    "resource_needs": "sample string",
+    "needs_clarification": [
+      {
+        "priority": "sample string",
+        "category": "sample string",
+        "description": "sample string"
+      }
+    ],
+    "processing_status": "sample string"
+  },
+  "has_module_outputs": true,
+  "module_outputs_example": {
+    "artifact_files": [
+      {
+        "file_url": "https://example.com/file.pdf"
+      }
+    ]
+  }
+}

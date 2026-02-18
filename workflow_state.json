@@ -1,0 +1,26 @@
+{
+  "agents": {
+    "intake_coordinator": {
+      "agent_id": "6996271fb3106c6867a6c6ac",
+      "type": "manager"
+    },
+    "slack_harvester": {
+      "agent_id": "699626ef4a9c68de2584b947",
+      "type": "sub-agent"
+    },
+    "insight_extractor": {
+      "agent_id": "6996270724c85f9f3404709a",
+      "type": "sub-agent"
+    },
+    "document_composer": {
+      "agent_id": "699626cbf17ccc575ee48c57",
+      "type": "sub-agent"
+    }
+  },
+  "manager_id": "6996271fb3106c6867a6c6ac",
+  "sub_agent_ids": [
+    "699626ef4a9c68de2584b947",
+    "6996270724c85f9f3404709a",
+    "699626cbf17ccc575ee48c57"
+  ]
+}
